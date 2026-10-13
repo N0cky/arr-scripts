@@ -26,7 +26,9 @@ werden nur bewusst übernommen.
 2. In `lidarr/setup.bash` (`repoRaw`) und `lidarr/scripts_init.bash` den neuen Tag eintragen, committen.
 3. Tag setzen und pushen: `git tag v1.x.y && git push origin main v1.x.y`.
 4. Auf Phoenix `/mnt/data/appdata/lidarr/custom-cont-init/scripts_init.bash` auf den neuen Tag stellen.
-5. Lidarr neu starten und im Container-Log prüfen, dass alle Dienste geladen wurden.
+5. Lidarr **zweimal** neu starten. LSIO kopiert die Dienste nach `/run/service`, *bevor* `custom-cont-init`
+   läuft. Der erste Start lädt also die neuen Dateien, erst der zweite führt sie aus.
+6. Prüfen, dass jede Datei in `/custom-services.d` gleich ihrer Kopie in `/run/service/custom-svc-<Name>/run` ist.
 
 ## Änderungen von oben übernehmen
 
