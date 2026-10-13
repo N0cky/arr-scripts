@@ -18,6 +18,8 @@ werden nur bewusst übernommen.
 | `lidarr/scripts_init.bash` | lädt `setup.bash` aus diesem Repo (fester Tag) |
 | `lidarr/setup.bash` | alle Dateien aus `repoRaw` (fester Tag). Pakete werden nur bei neuer `scriptVersion` installiert, die Dienste aber bei **jedem** Start geladen, damit immer genau der Tag läuft. Ab `v1.0.1` ersetzt es auch die bereits kopierten Dienste in `/run/service`, sodass ein Neustart reicht |
 | `lidarr/AutoArtistAdder.bash` | `AddDeezerArtistToLidarr` lädt die Künstlerliste nur noch nach einem Hinzufügen neu, statt pro geprüftem Künstler (~53 MB, mehrere Sekunden Lidarr-CPU je Abruf) |
+| `lidarr/setup.bash` (ab `v1.0.2`) | lädt zusätzlich `AudioDBVideoDownloader` als Dienst (bei mkaltner vorhanden, aber nie geladen) und legt neue Dienste beim Start selbst an |
+| `lidarr/Video.service.bash` | Künstler ohne IMVDB-Link, deren abgeleiteter Slug schon 404 lieferte, werden nur alle 30 Tage neu bei imvdb.com geprüft (vorher bei jedem Durchlauf, hier ~2.100 Anfragen) |
 | `lidarr/AutoConfig.service.bash` | Vorgabe `rescanAfterRefresh` = `afterManual` statt `always` (sonst täglich ~19 h Vollscan, Importe blockiert) |
 
 ## Neue Version ausrollen

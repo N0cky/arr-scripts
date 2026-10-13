@@ -587,6 +587,15 @@ VideoProcess () {
 		artistImvdbUrl=$(echo $lidarrArtistData | jq -r '.links[] | select(.name=="imvdb") | .url')
 		artistImvdbSlug=$(basename "$artistImvdbUrl")
 
+		# N0cky: an artist whose derived slug already returned 404 is only looked up again after 30 days
+		# (like the AudioDB NOT_FOUND cache); before, every artist without IMVDB link (~2,100 here) hit
+		# imvdb.com again on every pass.
+		imvdbMissingMarker="/config/extended/logs/video/imvdb-link-missing/${lidarrArtistFolderNoDisambig}--mbid-${lidarrArtistMusicbrainzId}"
+		if [ -z "$artistImvdbSlug" ] && [ -f "$imvdbMissingMarker" ] && [[ -z $(find "$imvdbMissingMarker" -mtime +30 -print) ]]; then
+			log "${processCount}/${lidarrArtistIdsCount} :: $lidarrArtistName :: IMVDB :: Not on IMVDB (checked within 30 days), skipping..."
+			continue
+		fi
+
 		# Fallback: derive slug from artist name if no IMVDB link in Lidarr
 		imvdbFallbackTransientError="false"
 		if [ -z "$artistImvdbSlug" ]; then

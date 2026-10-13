@@ -3,7 +3,7 @@ scriptVersion="1.5.8"
 SMA_PATH="/usr/local/sma"
 # N0cky fork: every file comes from this fixed tag instead of a moving branch, so a restart or container
 # update never pulls unreviewed changes. Bump it together with a new tag (see FORK.md).
-export repoRaw="https://raw.githubusercontent.com/N0cky/arr-scripts/v1.0.1"
+export repoRaw="https://raw.githubusercontent.com/N0cky/arr-scripts/v1.0.2"
 
 # N0cky fork: only the package installation is skipped when it is already done; the services below are
 # downloaded on every start, so the container always runs exactly the pinned version.
@@ -84,6 +84,7 @@ parallel ::: \
   'echo "Download AutoConfig service..." && curl -sfL ${repoRaw}/lidarr/AutoConfig.service.bash -o /custom-services.d/AutoConfig && echo "Done"' \
   'echo "Download Video service..." && curl -sfL ${repoRaw}/lidarr/Video.service.bash -o /custom-services.d/Video && echo "Done"' \
   'echo "Download Tidal Video Downloader service..." && curl -sfL ${repoRaw}/lidarr/TidalVideoDownloader.bash -o /custom-services.d/TidalVideoDownloader && echo "Done"' \
+  'echo "Download AudioDB Video Downloader service..." && curl -sfL ${repoRaw}/lidarr/AudioDBVideoDownloader.bash -o /custom-services.d/AudioDBVideoDownloader && echo "Done"' \
   'echo "Download Audio service..." && curl -sfL ${repoRaw}/lidarr/Audio.service.bash -o /custom-services.d/Audio && echo "Done"' \
   'echo "Download AutoArtistAdder service..." && curl -sfL ${repoRaw}/lidarr/AutoArtistAdder.bash -o /custom-services.d/AutoArtistAdder && echo "Done"' \
   'echo "Download UnmappedFilesCleaner service..." && curl -sfL ${repoRaw}/lidarr/UnmappedFilesCleaner.bash -o /custom-services.d/UnmappedFilesCleaner && echo "Done"' \
@@ -139,10 +140,16 @@ chmod 777 -R /root
 # N0cky fork: LSIO copies custom-services.d to /run/service/custom-svc-<Name>/run *before* custom-cont-init
 # runs, so the services downloaded above would only run after the next start. Refresh those copies now
 # (new inode via mv; a service that is already up gets restarted), so a new tag is active after one restart.
+# A service that is new in this tag gets its directory the same way LSIO creates it; s6 starts it at the
+# end of the container init together with the others.
 for svc in /custom-services.d/*; do
   [ -f "$svc" ] || continue
   dir="/run/service/custom-svc-$(basename "$svc")"
-  [ -f "$dir/run" ] || continue
+  if [ ! -f "$dir/run" ]; then
+    [ -d /run/service ] || continue
+    mkdir -p "$dir" && cp "$svc" "$dir/run" && chmod 755 "$dir/run" && echo "Added new $(basename "$svc") service"
+    continue
+  fi
   cmp -s "$svc" "$dir/run" && continue
   cp "$svc" "$dir/run.new" && chmod 755 "$dir/run.new" && mv "$dir/run.new" "$dir/run"
   echo "Activated new $(basename "$svc") service"
