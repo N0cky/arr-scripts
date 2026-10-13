@@ -3,7 +3,7 @@ scriptVersion="1.5.8"
 SMA_PATH="/usr/local/sma"
 # N0cky fork: every file comes from this fixed tag instead of a moving branch, so a restart or container
 # update never pulls unreviewed changes. Bump it together with a new tag (see FORK.md).
-export repoRaw="https://raw.githubusercontent.com/N0cky/arr-scripts/v1.0.0"
+export repoRaw="https://raw.githubusercontent.com/N0cky/arr-scripts/v1.0.1"
 
 # N0cky fork: only the package installation is skipped when it is already done; the services below are
 # downloaded on every start, so the container always runs exactly the pinned version.
@@ -135,6 +135,21 @@ fi
 
 chmod 777 -R /config/extended
 chmod 777 -R /root
+
+# N0cky fork: LSIO copies custom-services.d to /run/service/custom-svc-<Name>/run *before* custom-cont-init
+# runs, so the services downloaded above would only run after the next start. Refresh those copies now
+# (new inode via mv; a service that is already up gets restarted), so a new tag is active after one restart.
+for svc in /custom-services.d/*; do
+  [ -f "$svc" ] || continue
+  dir="/run/service/custom-svc-$(basename "$svc")"
+  [ -f "$dir/run" ] || continue
+  cmp -s "$svc" "$dir/run" && continue
+  cp "$svc" "$dir/run.new" && chmod 755 "$dir/run.new" && mv "$dir/run.new" "$dir/run"
+  echo "Activated new $(basename "$svc") service"
+  if /command/s6-svstat -u "$dir" 2>/dev/null | grep -q true; then
+    /command/s6-svc -r "$dir" && echo "Restarted running $(basename "$svc") service"
+  fi
+done
 
 if [ -f /custom-services.d/scripts_init.bash ]; then
    # user misconfiguration detected, sleeping...

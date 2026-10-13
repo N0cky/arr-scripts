@@ -16,7 +16,7 @@ werden nur bewusst übernommen.
 | Datei | Änderung |
 |---|---|
 | `lidarr/scripts_init.bash` | lädt `setup.bash` aus diesem Repo (fester Tag) |
-| `lidarr/setup.bash` | alle Dateien aus `repoRaw` (fester Tag). Pakete werden nur bei neuer `scriptVersion` installiert, die Dienste aber bei **jedem** Start geladen, damit immer genau der Tag läuft |
+| `lidarr/setup.bash` | alle Dateien aus `repoRaw` (fester Tag). Pakete werden nur bei neuer `scriptVersion` installiert, die Dienste aber bei **jedem** Start geladen, damit immer genau der Tag läuft. Ab `v1.0.1` ersetzt es auch die bereits kopierten Dienste in `/run/service`, sodass ein Neustart reicht |
 | `lidarr/AutoArtistAdder.bash` | `AddDeezerArtistToLidarr` lädt die Künstlerliste nur noch nach einem Hinzufügen neu, statt pro geprüftem Künstler (~53 MB, mehrere Sekunden Lidarr-CPU je Abruf) |
 | `lidarr/AutoConfig.service.bash` | Vorgabe `rescanAfterRefresh` = `afterManual` statt `always` (sonst täglich ~19 h Vollscan, Importe blockiert) |
 
@@ -26,8 +26,9 @@ werden nur bewusst übernommen.
 2. In `lidarr/setup.bash` (`repoRaw`) und `lidarr/scripts_init.bash` den neuen Tag eintragen, committen.
 3. Tag setzen und pushen: `git tag v1.x.y && git push origin main v1.x.y`.
 4. Auf Phoenix `/mnt/data/appdata/lidarr/custom-cont-init/scripts_init.bash` auf den neuen Tag stellen.
-5. Lidarr **zweimal** neu starten. LSIO kopiert die Dienste nach `/run/service`, *bevor* `custom-cont-init`
-   läuft. Der erste Start lädt also die neuen Dateien, erst der zweite führt sie aus.
+5. Lidarr neu starten. LSIO kopiert die Dienste nach `/run/service`, *bevor* `custom-cont-init` läuft;
+   `setup.bash` ersetzt diese Kopien danach durch die neuen Dateien („Activated new … service“ im Log).
+   Bis `v1.0.0` waren dafür zwei Neustarts nötig.
 6. Prüfen, dass jede Datei in `/custom-services.d` gleich ihrer Kopie in `/run/service/custom-svc-<Name>/run` ist.
 
 ## Änderungen von oben übernehmen
