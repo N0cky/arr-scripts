@@ -1,13 +1,19 @@
 #!/usr/bin/with-contenv bash
 scriptVersion="1.5.8"
 SMA_PATH="/usr/local/sma"
+# N0cky fork: every file comes from this fixed tag instead of a moving branch, so a restart or container
+# update never pulls unreviewed changes. Bump it together with a new tag (see FORK.md).
+export repoRaw="https://raw.githubusercontent.com/N0cky/arr-scripts/v1.0.0"
 
+# N0cky fork: only the package installation is skipped when it is already done; the services below are
+# downloaded on every start, so the container always runs exactly the pinned version.
+packagesDone=""
 if [ -f /config/setup_version.txt ]; then
   source /config/setup_version.txt
   if [ "$scriptVersion" == "$setupversion" ]; then
     if apk --no-cache list | grep installed | grep opus-tools | read; then
-      echo "Setup was previously completed, skipping..."
-      exit
+      echo "Packages were previously installed, skipping package setup..."
+      packagesDone="true"
     fi
   fi
 fi
@@ -15,6 +21,7 @@ echo "setupversion=$scriptVersion" > /config/setup_version.txt
 
 set -euo pipefail
 
+if [ -z "$packagesDone" ]; then
 echo "*** install packages ***" && \
 apk add -U --upgrade --no-cache \
   tidyhtml \
@@ -68,59 +75,60 @@ chgrp users ${SMA_PATH}/config/sma.log && \
 chmod g+w ${SMA_PATH}/config/sma.log && \
 echo "************ install pip dependencies ************" && \
 uv pip install --system --break-system-packages -r ${SMA_PATH}/setup/requirements.txt
+fi
 
 mkdir -p /custom-services.d/python /config/extended
 
 parallel ::: \
-  'echo "Download QueueCleaner service..." && curl -sfL https://raw.githubusercontent.com/mkaltner/arr-scripts/main/universal/services/QueueCleaner -o /custom-services.d/QueueCleaner && echo "Done"' \
-  'echo "Download AutoConfig service..." && curl -sfL https://raw.githubusercontent.com/mkaltner/arr-scripts/main/lidarr/AutoConfig.service.bash -o /custom-services.d/AutoConfig && echo "Done"' \
-  'echo "Download Video service..." && curl -sfL https://raw.githubusercontent.com/mkaltner/arr-scripts/main/lidarr/Video.service.bash -o /custom-services.d/Video && echo "Done"' \
-  'echo "Download Tidal Video Downloader service..." && curl -sfL https://raw.githubusercontent.com/mkaltner/arr-scripts/main/lidarr/TidalVideoDownloader.bash -o /custom-services.d/TidalVideoDownloader && echo "Done"' \
-  'echo "Download Audio service..." && curl -sfL https://raw.githubusercontent.com/mkaltner/arr-scripts/main/lidarr/Audio.service.bash -o /custom-services.d/Audio && echo "Done"' \
-  'echo "Download AutoArtistAdder service..." && curl -sfL https://raw.githubusercontent.com/mkaltner/arr-scripts/main/lidarr/AutoArtistAdder.bash -o /custom-services.d/AutoArtistAdder && echo "Done"' \
-  'echo "Download UnmappedFilesCleaner service..." && curl -sfL https://raw.githubusercontent.com/mkaltner/arr-scripts/main/lidarr/UnmappedFilesCleaner.bash -o /custom-services.d/UnmappedFilesCleaner && echo "Done"' \
-  'echo "Download ARLChecker service..." && curl -sfL https://raw.githubusercontent.com/mkaltner/arr-scripts/main/lidarr/python/ARLChecker.py -o /custom-services.d/python/ARLChecker.py && curl -sfL https://raw.githubusercontent.com/mkaltner/arr-scripts/main/lidarr/ARLChecker -o /custom-services.d/ARLChecker && echo "Done"' \
-  'echo "Download Script Functions..." && curl -sfL https://raw.githubusercontent.com/mkaltner/arr-scripts/main/universal/functions.bash -o /config/extended/functions && echo "Done"' \
-  'echo "Download PlexNotify script..." && curl -sfL https://raw.githubusercontent.com/mkaltner/arr-scripts/main/lidarr/PlexNotify.bash -o /config/extended/PlexNotify.bash  && echo "Done"' \
-  'echo "Download SMA config..." && curl -sfL https://raw.githubusercontent.com/mkaltner/arr-scripts/main/lidarr/sma.ini -o /config/extended/sma.ini  && echo "Done"' \
-  'echo "Download LyricExtractor script..." && curl -sfL https://raw.githubusercontent.com/mkaltner/arr-scripts/main/lidarr/LyricExtractor.bash -o /config/extended/LyricExtractor.bash && echo "Done"' \
-  'echo "Download ArtworkExtractor script..." && curl -sfL https://raw.githubusercontent.com/mkaltner/arr-scripts/main/lidarr/ArtworkExtractor.bash -o /config/extended/ArtworkExtractor.bash && echo "Done"' \
-  'echo "Download Beets Tagger script..." && curl -sfL https://raw.githubusercontent.com/mkaltner/arr-scripts/main/lidarr/BeetsTagger.bash -o /config/extended/BeetsTagger.bash && echo "Done"'
+  'echo "Download QueueCleaner service..." && curl -sfL ${repoRaw}/universal/services/QueueCleaner -o /custom-services.d/QueueCleaner && echo "Done"' \
+  'echo "Download AutoConfig service..." && curl -sfL ${repoRaw}/lidarr/AutoConfig.service.bash -o /custom-services.d/AutoConfig && echo "Done"' \
+  'echo "Download Video service..." && curl -sfL ${repoRaw}/lidarr/Video.service.bash -o /custom-services.d/Video && echo "Done"' \
+  'echo "Download Tidal Video Downloader service..." && curl -sfL ${repoRaw}/lidarr/TidalVideoDownloader.bash -o /custom-services.d/TidalVideoDownloader && echo "Done"' \
+  'echo "Download Audio service..." && curl -sfL ${repoRaw}/lidarr/Audio.service.bash -o /custom-services.d/Audio && echo "Done"' \
+  'echo "Download AutoArtistAdder service..." && curl -sfL ${repoRaw}/lidarr/AutoArtistAdder.bash -o /custom-services.d/AutoArtistAdder && echo "Done"' \
+  'echo "Download UnmappedFilesCleaner service..." && curl -sfL ${repoRaw}/lidarr/UnmappedFilesCleaner.bash -o /custom-services.d/UnmappedFilesCleaner && echo "Done"' \
+  'echo "Download ARLChecker service..." && curl -sfL ${repoRaw}/lidarr/python/ARLChecker.py -o /custom-services.d/python/ARLChecker.py && curl -sfL ${repoRaw}/lidarr/ARLChecker -o /custom-services.d/ARLChecker && echo "Done"' \
+  'echo "Download Script Functions..." && curl -sfL ${repoRaw}/universal/functions.bash -o /config/extended/functions && echo "Done"' \
+  'echo "Download PlexNotify script..." && curl -sfL ${repoRaw}/lidarr/PlexNotify.bash -o /config/extended/PlexNotify.bash  && echo "Done"' \
+  'echo "Download SMA config..." && curl -sfL ${repoRaw}/lidarr/sma.ini -o /config/extended/sma.ini  && echo "Done"' \
+  'echo "Download LyricExtractor script..." && curl -sfL ${repoRaw}/lidarr/LyricExtractor.bash -o /config/extended/LyricExtractor.bash && echo "Done"' \
+  'echo "Download ArtworkExtractor script..." && curl -sfL ${repoRaw}/lidarr/ArtworkExtractor.bash -o /config/extended/ArtworkExtractor.bash && echo "Done"' \
+  'echo "Download Beets Tagger script..." && curl -sfL ${repoRaw}/lidarr/BeetsTagger.bash -o /config/extended/BeetsTagger.bash && echo "Done"'
 
 
 if [ ! -f /config/extended/beets-config.yaml ]; then
 	echo "Download Beets config..."
-	curl -sfL "https://raw.githubusercontent.com/mkaltner/arr-scripts/main/lidarr/beets-config.yaml" -o /config/extended/beets-config.yaml
+	curl -sfL "${repoRaw}/lidarr/beets-config.yaml" -o /config/extended/beets-config.yaml
 	echo "Done"
 fi
 
 if [ ! -f /config/extended/beets-config-lidarr.yaml ]; then
 	echo "Download Beets lidarr config..."
-	curl -sfL "https://raw.githubusercontent.com/mkaltner/arr-scripts/main/lidarr/beets-config-lidarr.yaml" -o /config/extended/beets-config-lidarr.yaml
+	curl -sfL "${repoRaw}/lidarr/beets-config-lidarr.yaml" -o /config/extended/beets-config-lidarr.yaml
 	echo "Done"
 fi
 
 if [ ! -f /config/extended/deemix_config.json ]; then
   echo "Download Deemix config..."
-  curl -sfL "https://raw.githubusercontent.com/mkaltner/arr-scripts/main/lidarr/deemix_config.json" -o /config/extended/deemix_config.json
+  curl -sfL "${repoRaw}/lidarr/deemix_config.json" -o /config/extended/deemix_config.json
   echo "Done"
 fi
 
 if [ ! -f /config/extended/tidal-dl.json ]; then
   echo "Download Tidal (tidal-dl-ng) config..."
-  curl -sfL "https://raw.githubusercontent.com/mkaltner/arr-scripts/main/lidarr/tidal-dl.json" -o /config/extended/tidal-dl.json
+  curl -sfL "${repoRaw}/lidarr/tidal-dl.json" -o /config/extended/tidal-dl.json
   echo "Done"
 fi
 
 if [ ! -f /config/extended/beets-genre-whitelist.txt ]; then
 	echo "Download beets-genre-whitelist.txt..."
-	curl -sfL https://raw.githubusercontent.com/mkaltner/arr-scripts/main/lidarr/beets-genre-whitelist.txt -o /config/extended/beets-genre-whitelist.txt
+	curl -sfL ${repoRaw}/lidarr/beets-genre-whitelist.txt -o /config/extended/beets-genre-whitelist.txt
 	echo "Done"
 fi
 
 if [ ! -f /config/extended.conf ]; then
 	echo "Download Extended config..."
-	curl -sfL https://raw.githubusercontent.com/mkaltner/arr-scripts/main/lidarr/extended.conf -o /config/extended.conf
+	curl -sfL ${repoRaw}/lidarr/extended.conf -o /config/extended.conf
 	chmod 777 /config/extended.conf
 	echo "Done"
 fi

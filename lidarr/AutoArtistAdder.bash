@@ -80,7 +80,9 @@ AddDeezerTopTrackArtists () {
 }
 
 AddDeezerArtistToLidarr () {
-	lidarrArtistsData="$(curl -s "$arrUrl/api/v1/artist?apikey=${arrApiKey}")"
+	# N0cky: reuse the artist list (large libraries: ~53 MB, several seconds of Lidarr CPU per call);
+	# fetch it again only after this function added an artist (aaaStale=1 below).
+	if [ -z "$lidarrArtistsData" ] || [ -n "$aaaStale" ]; then lidarrArtistsData="$(curl -s "$arrUrl/api/v1/artist?apikey=${arrApiKey}")"; aaaStale=""; fi
 	lidarrArtistIds="$(echo "${lidarrArtistsData}" | jq -r ".[].foreignArtistId")"
 	deezerArtistsUrl=$(echo "${lidarrArtistsData}" | jq -r ".[].links | .[] | select(.name==\"deezer\") | .url")
 	deezerArtistIds="$(echo "$deezerArtistsUrl" | grep -o '[[:digit:]]*' | sort -u)"
@@ -138,7 +140,7 @@ AddDeezerArtistToLidarr () {
 			fi
 			log "$currentprocess of $getDeezerArtistsIdsCount :: $deezerArtistName :: Adding $artistName to Lidarr ($foreignId)..."
 			LidarrTaskStatusCheck
-			lidarrAddArtist=$(curl -s "$arrUrl/api/v1/artist" -X POST -H 'Content-Type: application/json' -H "X-Api-Key: $arrApiKey" --data-raw "$data")
+			lidarrAddArtist=$(curl -s "$arrUrl/api/v1/artist" -X POST -H 'Content-Type: application/json' -H "X-Api-Key: $arrApiKey" --data-raw "$data"); aaaStale=1
 		else
 			log "$currentprocess of $getDeezerArtistsIdsCount :: $deezerArtistName :: Artist not found in Musicbrainz, please add \"https://deezer.com/artist/${deezerArtistId}\" to the correct artist on Musicbrainz"
 			NotifyWebhook "ArtistError" "Artist not found in Musicbrainz, please add <https://deezer.com/artist/${deezerArtistId}> to the correct artist on Musicbrainz"
